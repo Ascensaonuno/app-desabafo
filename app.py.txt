@@ -1,0 +1,58 @@
+import streamlit as str
+import google.generativeai as genai
+
+# Configuração da página
+str.set_page_config(page_title="Espaço de Desabafo", page_icon="🧠", layout="centered")
+
+str.title("🧠 O teu Espaço de Desabafo")
+str.subheader("Estou aqui para te ouvir, sem julgamentos. Como te sentes hoje?")
+
+# Configurar a API do Gemini (Carrega a chave guardada nas definições da plataforma)
+if "GEMINI_API_KEY" in str.secrets:
+    genai.configure(api_key=str.secrets["GEMINI_API_KEY"])
+else:
+    str.error("Por favor, adiciona a tua GEMINI_API_KEY nas configurações do Streamlit.")
+    str.stop()
+
+# Instruções secretas para a IA ser o mais real, humana e empática possível
+PROMPT_SISTEMA = (
+    "Age como um ouvinte extremamente empático, caloroso, paciente e humano. "
+    "O utilizador está a usar esta app para desabafar. Não dês respostas robóticas, "
+    "não uses listas numeradas automáticas a menos que pedido, e evita parecer um manual de psicologia. "
+    "Valida os sentimentos do utilizador, demonstra compaixão e faz perguntas abertas "
+    "gentis para o ajudar a explorar o que sente. Mantém o tom acolhedor e natural, como um amigo próximo."
+)
+
+# Inicializar o modelo de IA
+model = genai.GenerativeModel(
+    model_name="gemini-1.5-flash",
+    system_instruction=PROMPT_SISTEMA
+)
+
+# Histórico de conversação
+if "historico" not in str.session_state:
+    str.session_state.historico = []
+
+if "chat" not in str.session_state:
+    str.session_state.chat = model.start_chat(history=[])
+
+# Mostrar mensagens anteriores
+for mensagem in str.session_state.historico:
+    with str.chat_message(mensagem["role"]):
+        str.markdown(mensagem["text"])
+
+# Entrada do utilizador
+if pedido := str.chat_input("Escreve aqui o que te vai na alma..."):
+    # Mostrar mensagem do utilizador
+    with str.chat_message("user"):
+        str.markdown(pedido)
+    str.session_state.historico.append({"role": "user", "text": pedido})
+
+    # Gerar resposta da IA
+    with str.chat_message("assistant"):
+        placeholder = str.empty()
+        with str.spinner("A ouvir..."):
+            resposta = str.session_state.chat.send_message(pedido)
+            placeholder.markdown(resposta.text)
+    
+    str.session_state.historico.append({"role": "assistant", "text": resposta.text})
